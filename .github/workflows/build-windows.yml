@@ -1,0 +1,27 @@
+name: Build MiniCut Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+      - name: Build release EXE
+        run: cargo build --release
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiniCut-Windows-11
+          path: target/release/minicut.exe
+          if-no-files-found: error
