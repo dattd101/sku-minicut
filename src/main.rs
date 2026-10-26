@@ -110,7 +110,8 @@ fn export_video(clips: Vec<Clip>, output: PathBuf) -> Result<PathBuf, String> {
 
 impl MiniCut {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx.set_pixels_per_point(1.2);
+        cc.egui_ctx.set_pixels_per_point(1.15);
+        configure_style(&cc.egui_ctx);
         let (frame_tx, requests) = mpsc::channel::<FrameRequest>();
         let (results, frame_rx) = mpsc::channel::<FrameResult>();
         thread::spawn(move || {
@@ -204,94 +205,179 @@ impl eframe::App for MiniCut {
                 self.needs_frame = false;
             }
         }
-        egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.heading("MiniCut");
-                if ui.button("+ Thêm video").clicked() { self.add_files(); }
+        egui::TopBottomPanel::top("toolbar").exact_height(70.0).frame(
+            egui::Frame::default().fill(egui::Color32::WHITE)
+                .inner_margin(egui::Margin::symmetric(20, 12))
+                .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(225, 228, 233)))
+        ).show(ctx, |ui| {
+            ui.horizontal_centered(|ui| {
+                ui.heading(egui::RichText::new("MiniCut").size(26.0).strong().color(egui::Color32::from_rgb(34, 43, 57)));
+                ui.label(egui::RichText::new("  VIDEO EDITOR").size(11.0).color(egui::Color32::from_rgb(112, 122, 136)));
+                ui.add_space(24.0);
+                if ui.add(egui::Button::new("＋  Thêm video").min_size(egui::vec2(130.0, 36.0))).clicked() { self.add_files(); }
+                ui.add_space(8.0);
                 if ui.add_enabled(!self.exporting && !self.clips.is_empty(),
-                    egui::Button::new("Xuất MP4")).clicked() { self.export(); }
-                if self.exporting { ui.spinner(); }
+                    egui::Button::new(egui::RichText::new("Xuất video MP4").color(egui::Color32::WHITE))
+                        .fill(egui::Color32::from_rgb(51, 107, 194)).min_size(egui::vec2(148.0, 36.0))).clicked() { self.export(); }
+                if self.exporting { ui.spinner(); ui.label("Đang xuất video..."); }
             });
         });
-        egui::SidePanel::left("clips").min_width(260.0).show(ctx, |ui| {
-            ui.heading("Danh sách clip (thứ tự ghép)");
-            let mut action: Option<(usize, &str)> = None;
-            for i in 0..self.clips.len() {
-                ui.horizontal(|ui| {
-                    let name = self.clips[i].path.file_name().unwrap_or_default().to_string_lossy();
-                    if ui.selectable_label(self.selected == Some(i),
-                        format!("{}. {} ({:.1}s)", i + 1, name, self.clips[i].length())).clicked() {
-                        action = Some((i, "select"));
+        egui::TopBottomPanel::bottom("status").exact_height(36.0)
+            .frame(egui::Frame::default().fill(egui::Color32::WHITE)
+                .inner_margin(egui::Margin::symmetric(16, 8)))
+            .show(ctx, |ui| {
+                ui.label(egui::RichText::new(&self.status).size(12.0)
+                    .color(egui::Color32::from_rgb(91, 103, 119)));
+            });
+        egui::SidePanel::left("clips").default_width(300.0).min_width(260.0)
+            .frame(egui::Frame::default().fill(egui::Color32::from_rgb(249, 250, 252))
+                .inner_margin(egui::Margin::same(16)))
+            .show(ctx, |ui| {
+                ui.heading("Danh sách video");
+                ui.label(egui::RichText::new("Thứ tự từ trên xuống là thứ tự ghép")
+                    .size(12.0).color(egui::Color32::from_rgb(108, 118, 131)));
+                ui.add_space(12.0);
+                let mut action: Option<(usize, &str)> = None;
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    for i in 0..self.clips.len() {
+                        let selected = self.selected == Some(i);
+                        egui::Frame::default()
+                            .fill(if selected { egui::Color32::from_rgb(225, 236, 251) } else { egui::Color32::WHITE })
+                            .stroke(egui::Stroke::new(1.0, if selected { egui::Color32::from_rgb(123, 164, 219) } else { egui::Color32::from_rgb(226, 229, 234) }))
+                            .corner_radius(egui::CornerRadius::same(9))
+                            .inner_margin(egui::Margin::same(10))
+                            .show(ui, |ui| {
+                                ui.set_min_width(ui.available_width());
+                                let name = self.clips[i].path.file_name().unwrap_or_default().to_string_lossy();
+                                if ui.selectable_label(selected, format!("{:02}  {}", i + 1, name)).clicked() { action = Some((i, "select")); }
+                                ui.horizontal(|ui| {
+                                    ui.label(egui::RichText::new(format!("{:.1} giây", self.clips[i].length())).size(12.0));
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        if ui.small_button("Xóa").clicked() { action = Some((i, "delete")); }
+                                        if ui.small_button("↓").clicked() { action = Some((i, "down")); }
+                                        if ui.small_button("↑").clicked() { action = Some((i, "up")); }
+                                    });
+                                });
+                            });
+                        ui.add_space(8.0);
                     }
-                    if ui.small_button("↑").clicked() { action = Some((i, "up")); }
-                    if ui.small_button("↓").clicked() { action = Some((i, "down")); }
-                    if ui.small_button("✕").clicked() { action = Some((i, "delete")); }
                 });
-            }
-            if let Some((i, action)) = action {
-                match action {
-                    "select" => self.select(i),
-                    "up" if i > 0 => { self.clips.swap(i, i - 1); self.select(i - 1); }
-                    "down" if i + 1 < self.clips.len() => { self.clips.swap(i, i + 1); self.select(i + 1); }
-                    "delete" => {
-                        self.clips.remove(i);
-                        if self.clips.is_empty() { self.selected = None; self.texture = None; }
-                        else { self.select(i.min(self.clips.len() - 1)); }
+                if let Some((i, action)) = action {
+                    match action {
+                        "select" => self.select(i),
+                        "up" if i > 0 => { self.clips.swap(i, i - 1); self.select(i - 1); }
+                        "down" if i + 1 < self.clips.len() => { self.clips.swap(i, i + 1); self.select(i + 1); }
+                        "delete" => {
+                            self.clips.remove(i);
+                            if self.clips.is_empty() { self.selected = None; self.texture = None; }
+                            else { self.select(i.min(self.clips.len() - 1)); }
+                        }
+                        _ => {}
                     }
-                    _ => {}
-                }
-            }
-            ui.separator();
-            let total: f64 = self.clips.iter().map(Clip::length).sum();
-            ui.label(format!("Tổng thời lượng: {:.2} giây", total));
-        });
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if let Some(i) = self.selected {
-                ui.heading("Preview & Cắt video");
-                if let Some(tex) = &self.texture {
-                    let available = ui.available_width().min(960.0);
-                    let scale = (available / tex.size_vec2().x).min(1.0);
-                    ui.image((tex.id(), tex.size_vec2() * scale));
-                } else {
-                    ui.label("Đang tải khung hình preview...");
                 }
                 ui.separator();
-                let clip = &mut self.clips[i];
-                ui.label(format!("Thời điểm: {:.2}s / {:.2}s", self.playhead, clip.duration));
-                if ui.add(egui::Slider::new(&mut self.playhead, 0.0..=clip.duration)
-                    .text("Tua video")).changed() { self.needs_frame = true; }
-                ui.horizontal(|ui| {
-                    if ui.button("Đặt bắt đầu tại đây").clicked() {
-                        clip.start = self.playhead.min(clip.end - 0.05).max(0.0);
-                    }
-                    if ui.button("Đặt kết thúc tại đây").clicked() {
-                        clip.end = self.playhead.max(clip.start + 0.05).min(clip.duration);
-                    }
-                });
-                ui.label("Chọn khoảng thời gian cần GIỮ LẠI:");
-                let old_start = clip.start;
-                let old_end = clip.end;
-                ui.add(egui::Slider::new(&mut clip.start, 0.0..=clip.duration).text("Bắt đầu (s)"));
-                ui.add(egui::Slider::new(&mut clip.end, 0.0..=clip.duration).text("Kết thúc (s)"));
-                clip.start = clip.start.clamp(0.0, (clip.duration - 0.05).max(0.0));
-                clip.end = clip.end.clamp(clip.start + 0.05, clip.duration);
-                if (clip.start - old_start).abs() > 0.0001 || (clip.end - old_end).abs() > 0.0001 {
-                    self.playhead = self.playhead.clamp(clip.start, clip.end);
-                    self.needs_frame = true;
+                let total: f64 = self.clips.iter().map(Clip::length).sum();
+                ui.label(egui::RichText::new(format!("Tổng thời lượng: {:.2} giây", total)).strong());
+            });
+        egui::CentralPanel::default()
+            .frame(egui::Frame::default().fill(egui::Color32::from_rgb(243, 245, 248))
+                .inner_margin(egui::Margin::same(20)))
+            .show(ctx, |ui| {
+                if let Some(i) = self.selected {
+                    ui.heading("Xem trước video");
+                    ui.add_space(10.0);
+                    egui::Frame::default().fill(egui::Color32::from_rgb(31, 37, 48))
+                        .corner_radius(egui::CornerRadius::same(10))
+                        .inner_margin(egui::Margin::same(12))
+                        .show(ui, |ui| {
+                            let max_width = ui.available_width().min(850.0);
+                            let max_height = (ui.available_height() * 0.48).clamp(160.0, 450.0);
+                            if let Some(tex) = &self.texture {
+                                let size = tex.size_vec2();
+                                let scale = (max_width / size.x).min(max_height / size.y).min(1.0);
+                                ui.image((tex.id(), size * scale));
+                            } else {
+                                ui.allocate_ui(egui::vec2(max_width, max_height.min(280.0)), |ui| {
+                                    ui.centered_and_justified(|ui| {
+                                        ui.label(egui::RichText::new("Đang tải khung hình...").color(egui::Color32::WHITE));
+                                    });
+                                });
+                            }
+                        });
+                    ui.add_space(14.0);
+                    egui::Frame::default().fill(egui::Color32::WHITE)
+                        .corner_radius(egui::CornerRadius::same(10))
+                        .inner_margin(egui::Margin::same(16))
+                        .show(ui, |ui| {
+                            ui.heading("Cắt video");
+                            let clip = &mut self.clips[i];
+                            ui.label(format!("Vị trí: {:.2}s / {:.2}s", self.playhead, clip.duration));
+                            if ui.add(egui::Slider::new(&mut self.playhead, 0.0..=clip.duration).text("Thanh tua")).changed() {
+                                self.needs_frame = true;
+                            }
+                            ui.horizontal_wrapped(|ui| {
+                                if ui.button("Đặt điểm bắt đầu").clicked() {
+                                    clip.start = self.playhead.min(clip.end - 0.05).max(0.0);
+                                }
+                                if ui.button("Đặt điểm kết thúc").clicked() {
+                                    clip.end = self.playhead.max(clip.start + 0.05).min(clip.duration);
+                                }
+                            });
+                            ui.add_space(8.0);
+                            ui.label("Khoảng video muốn giữ lại");
+                            let old_start = clip.start;
+                            let old_end = clip.end;
+                            ui.add(egui::Slider::new(&mut clip.start, 0.0..=clip.duration).text("Bắt đầu (s)"));
+                            ui.add(egui::Slider::new(&mut clip.end, 0.0..=clip.duration).text("Kết thúc (s)"));
+                            clip.start = clip.start.clamp(0.0, (clip.duration - 0.05).max(0.0));
+                            clip.end = clip.end.clamp(clip.start + 0.05, clip.duration);
+                            if (clip.start - old_start).abs() > 0.0001 || (clip.end - old_end).abs() > 0.0001 {
+                                self.playhead = self.playhead.clamp(clip.start, clip.end);
+                                self.needs_frame = true;
+                            }
+                            ui.label(egui::RichText::new(format!("Giữ lại: {:.2}s – {:.2}s  |  {:.2} giây", clip.start, clip.end, clip.length())).strong());
+                            if ui.button("Xem đầu đoạn").clicked() { self.playhead = clip.start; self.needs_frame = true; }
+                        });
+                } else {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(110.0);
+                        ui.heading("Bắt đầu với MiniCut");
+                        ui.label("Thêm video để cắt và ghép thành một file MP4.");
+                        ui.add_space(12.0);
+                        if ui.button("＋  Chọn video từ máy").clicked() { self.add_files(); }
+                    });
                 }
-                ui.label(format!("Đoạn giữ lại: {:.2}s → {:.2}s ({:.2}s)", clip.start, clip.end, clip.length()));
-                if ui.button("Xem khung hình đầu đoạn").clicked() {
-                    self.playhead = clip.start; self.needs_frame = true;
-                }
-            } else {
-                ui.centered_and_justified(|ui| { ui.label("Bấm '+ Thêm video' để bắt đầu."); });
-            }
-        });
-        egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
-            ui.label(&self.status);
-        });
+            });
         ctx.request_repaint_after(Duration::from_millis(100));
     }
+}
+
+fn configure_style(ctx: &egui::Context) {
+    // Load Windows' own UI font at runtime; no font file needs to be distributed.
+    for name in ["segoeui.ttf", "arial.ttf"] {
+        let path = std::path::Path::new(r"C:\Windows\Fonts").join(name);
+        if let Ok(bytes) = std::fs::read(path) {
+            let mut fonts = egui::FontDefinitions::default();
+            fonts.font_data.insert("windows_ui".into(),
+                egui::FontData::from_owned(bytes).into());
+            for family in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
+                fonts.families.entry(family).or_default().insert(0, "windows_ui".into());
+            }
+            ctx.set_fonts(fonts);
+            break;
+        }
+    }
+    let mut visuals = egui::Visuals::light();
+    visuals.panel_fill = egui::Color32::from_rgb(243, 245, 248);
+    visuals.window_fill = egui::Color32::WHITE;
+    visuals.widgets.inactive.bg_fill = egui::Color32::from_rgb(236, 239, 244);
+    visuals.widgets.hovered.bg_fill = egui::Color32::from_rgb(221, 233, 250);
+    visuals.selection.bg_fill = egui::Color32::from_rgb(58, 117, 201);
+    ctx.set_visuals(visuals);
+    let mut style = (*ctx.style()).clone();
+    style.spacing.item_spacing = egui::vec2(9.0, 9.0);
+    style.spacing.button_padding = egui::vec2(12.0, 8.0);
+    ctx.set_style(style);
 }
 
 fn main() -> eframe::Result<()> {

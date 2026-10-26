@@ -50,3 +50,10 @@ Rust + egui (eframe) + FFmpeg. Có preview khung hình khi kéo thanh thời gia
 5. Khi workflow thành công, mở run > Artifacts > tải `MiniCut-Windows-11`, giải nén và chạy `minicut.exe`.
 
 **Lưu ý:** `minicut.exe` gọi `ffmpeg` và `ffprobe` từ PATH của Windows; cần giữ FFmpeg đã cài trên máy. Artifact không chứa FFmpeg. Chưa kiểm chứng workflow thực tế trên GitHub.
+
+## Giao diện sáng màu ghi (V2)
+
+- Nền xám nhạt, thẻ trắng, thanh công cụ gọn.
+- Tự tải Segoe UI từ `C:\Windows\Fonts\segoeui.ttf` để hiển thị tiếng Việt có dấu trên Windows 11.
+- Preview là ảnh tĩnh tại vị trí thanh tua, không phải phát video liên tục.
+- Cắt và ghép vẫn dùng FFmpeg. GitHub Actions tự build EXE khi push lên main.
