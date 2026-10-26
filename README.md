@@ -1,17 +1,15 @@
-# sku media Split Merge — V5
+# sku media Split Merge V6 — Merge trên timeline
 
-Ứng dụng Windows 11 dùng Next.js 15 + Tauri 2 + Rust + FFmpeg.
+Giữ nguyên giao diện V5 và Split (Ctrl+B), bổ sung kéo-thả đổi thứ tự clip ở danh sách bên trái hoặc timeline. Khi xuất, toàn bộ clip trên timeline được ghép theo thứ tự hiện tại thành MP4 480p / 30fps, H.264 + AAC. Clip khác độ phân giải và không có âm thanh được chuẩn hóa bằng FFmpeg trước khi ghép.
 
-## Thay đổi
-- Dùng logo SKU do người dùng cung cấp ở header, icon EXE và icon bộ cài.
-- Đổi tên cửa sổ và ứng dụng thành `sku media Split Merge`.
-- Bỏ nút Thêm video trên thanh công cụ cạnh Cài đặt; giữ nút Thêm video ở thư viện bên trái.
-- Preview dùng khung letterbox `object-fit: contain`, không crop video và giữ đúng tỷ lệ gốc.
-- Xuất video mặc định 480p (giữ nguyên thiết lập từ bản trước).
+## Cách sử dụng
+1. Bấm **Thêm video** để nhập ít nhất hai video.
+2. Kéo một clip lên clip khác trong danh sách hoặc timeline để thay đổi thứ tự ghép. Có thể dùng nút mũi tên lên/xuống như trước.
+3. Dùng **Ctrl+B** để tách, **Delete** để xóa, kéo mép để trim.
+4. Bấm **Ghép N đoạn · Xuất MP4** và chọn đường dẫn. Kết quả là một file MP4 duy nhất.
+5. **Ctrl+Z** hoàn tác đổi thứ tự.
 
-## Build bằng GitHub Desktop
-1. Copy nội dung thư mục này vào repository hiện tại, giữ nguyên `.git`.
-2. Commit và Push origin.
-3. Vào GitHub Actions → Build SKU Media Windows, tải artifact sau khi build xanh.
+## Build trên Windows 11
+Giải nén ZIP, sao chép **nội dung** thư mục vào repository GitHub Desktop hiện tại (không xóa `.git`), commit và Push origin. Workflow `.github/workflows/build-windows.yml` sẽ build bản Windows.
 
-Lưu ý: bản source chưa được xác nhận chạy thực tế trên Windows. Windows có thể cache icon cũ, cần tạo shortcut mới hoặc khởi động lại Explorer.
+**Lưu ý:** Chưa kiểm thử runtime Windows trong môi trường này. Import vẫn tạo proxy preview, vì vậy video dài có thể import chậm. Export chuẩn hóa và mã hóa từng đoạn, nên ghép video dài có thể mất thời gian.
