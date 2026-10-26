@@ -1,9 +1,43 @@
 {
-  "$schema":"https://schema.tauri.app/config/2",
-  "productName":"MiniCut V3",
-  "version":"3.0.0",
-  "identifier":"com.minicut.editor",
-  "build":{"beforeDevCommand":"npm run dev","devUrl":"http://127.0.0.1:3000","beforeBuildCommand":"npm run build","frontendDist":"../out"},
-  "app":{"windows":[{"title":"MiniCut V3 - Video Editor","width":1320,"height":850,"minWidth":920,"minHeight":620,"backgroundColor":"#f2f4f7"}],"security":{"csp":null,"assetProtocol":{"enable":true,"scope":["$APPCACHE/**"]}}},
-  "bundle":{"active":true,"targets":["nsis"],"shortDescription":"Trình cắt ghép video","icon":["icons/icon.ico"]}
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "sku media Split Merge",
+  "version": "5.0.0",
+  "identifier": "com.minicut.editor",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:3000",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../out"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "sku media Split Merge",
+        "width": 1320,
+        "height": 850,
+        "minWidth": 920,
+        "minHeight": 620,
+        "backgroundColor": "#f2f4f7"
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPCACHE/**"
+        ]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "shortDescription": "SKU Media - Cắt và ghép video",
+    "icon": [
+      "icons/icon.ico"
+    ]
+  }
 }

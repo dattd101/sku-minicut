@@ -105,7 +105,7 @@ async fn export_video(state: State<'_, ToolState>, segments: Vec<Segment>, outpu
                 if !s.has_audio { cmd.args(["-f", "lavfi", "-t", &format!("{:.3}", duration), "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]); }
                 cmd.args(["-map", "0:v:0"]);
                 if s.has_audio { cmd.args(["-map", "0:a:0"]); } else { cmd.args(["-map", "1:a:0"]); }
-                cmd.args(["-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "160k", "-shortest", "-movflags", "+faststart"]);
+                cmd.args(["-vf", "scale=854:480:force_original_aspect_ratio=decrease,pad=854:480:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "veryfast", "-crf", "24", "-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "128k", "-shortest", "-movflags", "+faststart"]);
                 let out = cmd.arg(&file).output().map_err(|e| e.to_string())?;
                 if !out.status.success() { return Err(format!("Lỗi xử lý clip {}: {}", index+1, String::from_utf8_lossy(&out.stderr))); }
                 clips.push(file);
